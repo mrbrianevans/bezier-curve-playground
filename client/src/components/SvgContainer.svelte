@@ -13,5 +13,6 @@
     svg.svgContainer{
         border: 1px solid black;
         margin: 1rem;
+        background: white;
     }
 </style>

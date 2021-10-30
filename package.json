@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "format": "prettier -w **/*.ts"
+  },
+  "devDependencies": {
+    "prettier": "^2.4.1"
+  },
+  "prettier": {
+    "semi": false,
+    "trailingComma": "none"
+  }
+}

@@ -2,22 +2,17 @@
     import type {JsonPath} from "../../../lib/JsonPath";
     import {convertJsonToString} from "../../../lib/JsonPath";
     import {onMount} from "svelte";
+    import {getMousePosition} from "../utils/getMousePosition";
+    import {applyPointDifference, pointDifference} from "../../../lib/PointDifference";
 
     export let jsonPath: JsonPath
 
     let draw: string
     $: draw = jsonPath?convertJsonToString(jsonPath):''
-    let handles = jsonPath.segments.map(()=>undefined)
     export let svg
 
-    function getMousePosition(evt) {
-      var CTM = svg.getScreenCTM();
-      return {
-        x: (evt.clientX - CTM.e) / CTM.a,
-        y: (evt.clientY - CTM.f) / CTM.d
-      };
-    }
     const dragStart = (index, handle) => () => {
+      console.log('Now dragging', index, typeof handle === 'number'? 'handle':handle)
       const dragger = drag(index, handle)
       svg.addEventListener('mousemove', dragger)
       // cleans itself up
@@ -31,17 +26,25 @@
     }
     const drag = (index, handle) => (e: MouseEvent) => {
       e.preventDefault()
-      const xy = getMousePosition(e)
-      jsonPath.segments[index][handle] = xy
+      const xy = getMousePosition(e, svg)
+      if(handle === 'end'){
+        const shift = pointDifference(jsonPath.segments[index][handle], xy)
+        jsonPath.segments[index][handle] = xy
+        const nearest = jsonPath.segments[index]['handles'].length - 1
+        if(nearest >= 0) jsonPath.segments[index]['handles'][nearest] = applyPointDifference(jsonPath.segments[index]['handles'][nearest], shift)
+        if(jsonPath.segments[index + 1]?.handles.length > 0){
+          jsonPath.segments[index + 1]['handles'][0] = applyPointDifference(jsonPath.segments[index + 1]['handles'][0], shift)
+        }
+      }else {
+        jsonPath.segments[index]['handles'][handle] = xy
+      }
     }
     let focused = false
     let group
     let listeningForFocus = false
     $: if(listeningForFocus === false && svg) {
       listeningForFocus = true
-      console.log('listening for focus click')
       svg.addEventListener('mousedown', (e) => {
-        // console.log(e.target.parentElement === group)
         focused = e.target.parentElement === group
       })
     }
@@ -50,33 +53,25 @@
 <g bind:this={group} class:focus={focused}>
     <path d={draw} class={'path'} on:click={e=>focused=true}></path>
 {#each jsonPath.segments as segment, index}
-    {#if segment.type === 'cubic'}
-        <circle r="1" cx={segment.handleA.x} cy={segment.handleA.y}
-                class="cubic handle"
-                on:mousedown={dragStart(index, 'handleA')}
-        ></circle>
-        <circle r="1" cx={segment.handleB.x} cy={segment.handleB.y}
-                class="cubic handle"
-                on:mousedown={dragStart(index, 'handleB')}
-        ></circle>
-    {/if}
-    {#if segment.type === 'quadratic'}
-        <circle r="1" cx={segment.handle.x} cy={segment.handle.y}
-                class="quadratic handle"
-                on:mousedown={dragStart(index, 'handle')}
-        ></circle>
-    {/if}
+    <rect class="point" x={segment.end.x} y={segment.end.y}
+          on:mousedown={dragStart(index, 'end')}></rect>
+    {#each segment.handles as handle, handleIndex}
+    <circle r="1" cx={handle.x} cy={handle.y}
+            class={"handle "+segment.type}
+            on:mousedown={dragStart(index, handleIndex)}
+    ></circle>
+    {/each}
 {/each}
 </g>
 
 <style>
     path.path{
         fill: none;
-        stroke: black;
+        stroke: #0007;
         stroke-width: 3px;
     }
     g.focus path{
-        stroke: brown;
+        stroke: #00a8ff;
     }
     circle.handle{
         stroke: #0002;
@@ -84,6 +79,17 @@
         stroke-width: 0.025rem;
     }
     g.focus circle.handle{
+        fill: rgba(19, 51, 56, 0.2);
+        stroke: #0007;
+    }
+    rect.point{
+        width: 1px;
+        height: 1px;
+        stroke-width: 0.025rem;
+        stroke: #0002;
+        fill: #0001;
+    }
+    g.focus rect.point{
         fill: rgba(19, 51, 56, 0.2);
         stroke: #0007;
     }
