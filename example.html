@@ -1,0 +1,56 @@
+<html>
+
+<div>
+  <p>Enter handles</p>
+  <label>Start<input type="number" id="start"></input></label>
+  <label>A<input type="number" id="a"></input></label>
+  <label>B<input type="number" id="b"></input></label>
+  <label>End<input type="number" id="end"></input></label>
+<br/>
+  <label>Handle height<input type="number" id="handle"></input></label>
+  <label>Line height<input type="number" id="line"></input></label>
+</div>
+<div>
+<svg viewBox="0 0 50 50">
+  <circle cx="0" cy="0" r="2" fill="red"></circle>
+  <circle cx="50" cy="0" r="2" fill="red"></circle>
+  <circle cx="0" cy="50" r="2" fill="red"></circle>
+  <circle cx="50" cy="50" r="2" fill="red"></circle>
+  <path id="path"
+        d="M 10 20 Q 30 10, 50 20"
+        stroke="black" strokeWidth="5px" fill="none"></path>
+</svg>
+</div>
+
+<style>
+svg{
+    width: 500px;
+    height: 500px;
+    border: 1px solid black;
+}
+</style>
+
+<script>
+const keys = ['a', 'b', 'start', 'end', 'handle', 'line']
+const getValues = () => {
+  const values = {}
+  keys.forEach(key=>values[key] = document.getElementById(key).value)
+  return values
+}
+const values = getValues()
+const redraw = () => {
+  const {a, b,start,end,handle, line} = values
+  document.getElementById('path').setAttribute('d', `M ${start} ${line} C ${a} ${handle}, ${b} ${handle}, ${end} ${line}`)
+}
+const setListeners = () => {
+  keys.forEach(key=>document
+               .getElementById(key)
+               .addEventListener('input', e=>{
+    values[e.target.id] = e.target.value
+    redraw()
+  }))
+}
+setListeners()
+</script>
+
+</html>
