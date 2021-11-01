@@ -5,7 +5,7 @@
   import { applyPointDifference, pointDifference } from "../../../lib/PointDifference"
 
   export let jsonPath: JsonPath
-
+  export let activePen = null
   let draw: string
   $: draw = jsonPath ? convertJsonToString(jsonPath) : ""
   export let svg
@@ -33,7 +33,10 @@
       jsonPath.segments[index][handle] = xy
       const nearest = jsonPath.segments[index]["handles"].length - 1
       if (nearest >= 0) jsonPath.segments[index]["handles"][nearest] = applyPointDifference(jsonPath.segments[index]["handles"][nearest], shift)
-      if (jsonPath.segments[index + 1]?.handles.length > 0) {
+      moveNextHandle: if (jsonPath.segments[index + 1]?.handles.length > 0) {
+        if(jsonPath.segments[index+1].type === "quadratic" && (index === 0 || index === jsonPath.segments.length -1)) {
+          break moveNextHandle
+        }
         jsonPath.segments[index + 1]["handles"][0] = applyPointDifference(jsonPath.segments[index + 1]["handles"][0], shift)
       } else if (jsonPath.segments.length === index + 1) {
         // snap to close path
@@ -48,7 +51,7 @@
   $: if (listeningForFocus === false && svg) {
     listeningForFocus = true
     svg.addEventListener("mousedown", (e) => {
-      focused = e.target.parentElement === group
+      focused = e.target.parentElement === group || jsonPath.segments.length === 0
     })
   }
 </script>
@@ -57,23 +60,29 @@
   <path d={draw} class={'path'} on:click={e=>focused=true}></path>
   {#if focused}
     {#each jsonPath.segments as segment, index}
-      <!-- rectangle for each "end" point -->
-      <rect class="point" x={segment.end.x-0.5} y={segment.end.y-0.5}
-            on:mousedown={dragStart(index, 'end')}>
-        <!-- minus 0.5 from x and y to compensate for 1px width and height -->
-      </rect>
       {#each segment.handles as handle, handleIndex}
-        <!-- circle for each handle -->
-        <circle r="1" cx={handle.x} cy={handle.y}
-                class={"handle "+segment.type}
-                on:mousedown={dragStart(index, handleIndex)}
-        ></circle>
         <!-- line to "end" point from each handle -->
         {#if jsonPath.segments[index - 1 + handleIndex]}
           <line x1={handle.x} y1={handle.y} x2={jsonPath.segments[index - 1 + handleIndex].end.x}
                 y2={jsonPath.segments[index - 1 + handleIndex].end.y} class="handleConnector"></line>
         {/if}
+        {#if segment.type === 'quadratic'}
+          <line x1={handle.x} y1={handle.y} x2={jsonPath.segments[index].end.x}
+                y2={jsonPath.segments[index].end.y} class="handleConnector"></line>
+        {/if}
+        <!-- circle for each handle -->
+        <circle r="1" cx={handle.x} cy={handle.y}
+                class={"handle "+segment.type}
+                on:mousedown={dragStart(index, handleIndex)}
+        ></circle>
       {/each}
+      {#if segment.type !== 'zeroClosePath'}
+      <!-- rectangle for each "end" point -->
+      <rect class="point" x={segment.end.x-0.5} y={segment.end.y-0.5}
+            on:mousedown={dragStart(index, 'end')}>
+        <!-- minus 0.5 from x and y to compensate for 1px width and height -->
+      </rect>
+      {/if}
     {/each}
   {/if}
 </g>

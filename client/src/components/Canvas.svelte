@@ -1,70 +1,86 @@
 <script lang="ts">
 
-import SvgContainer from "./SvgContainer.svelte";
-import type {JsonPath} from "../../../lib/JsonPath";
-import SvgPath from "./SvgPath.svelte";
-import {getMousePosition} from "../utils/getMousePosition";
-import {getMidpointsOfLine} from "../../../lib/LineMidpoints";
-import {getLastElem} from "../../../lib/utils/ArrayUtils";
-type Pen = 'cubic'
-let svg = null
-let cubicPath: JsonPath = {segments:[]}
-let activePen: Pen | null = null
+    import SvgContainer from "./SvgContainer.svelte"
+    import type { JsonPath } from "../../../lib/JsonPath"
+    import SvgPath from "./SvgPath.svelte"
+    import { getMousePosition } from "../utils/getMousePosition"
+    import { getMidpointsOfLine } from "../../../lib/LineMidpoints"
+    import { getLastElem } from "../../../lib/utils/ArrayUtils"
 
-const togglePen = (pen: Pen) => {
-  if(activePen === pen) activePen = null
-  else activePen = pen
-}
-const handleClick = (e) => {
-  const point = getMousePosition(e, svg)
-  if(activePen === 'cubic') addCubic(e,point)
-}
-const similar = (n1: number, n2: number) => n1.toPrecision(2) === n2.toPrecision(2)
-const addCubic = (e, p) => {
-  const started = cubicPath.segments.length > 0
-  if(!started){
-    const startingPoint = p
-    cubicPath.segments = [{type: 'move', absolute: true, end: startingPoint, handles: []}]
-  }else if (started){
-    const lastSeg = getLastElem(cubicPath.segments).end
-    const firstSeg = cubicPath.segments[0].end
-    if(similar(firstSeg.x, p.x) && similar(firstSeg.y, p.y)) {
-      console.log('snapped')
-      p = firstSeg
-    }
-    const [handleA, handleB] = getMidpointsOfLine({start: lastSeg, end: p, qty: 2})
-    cubicPath.segments = [...cubicPath.segments, {type: 'cubic', handles: [handleA, handleB] , end: p, absolute: true}]
+    type Pen =  null | JsonPath['segments'][number]['type']
+  let svg = null
+  let cubicPath: JsonPath = { segments: [] }
+  let activePen: Pen | null = null
+
+  const togglePen = (pen: Pen) => {
+    if (activePen === pen) activePen = null
+    else activePen = pen
   }
-}
-let listeningForClick = false
-$: if(!listeningForClick && svg) {
-  listeningForClick = true
-  svg.addEventListener('click', handleClick)
-}
+  const handleClick = (e) => {
+    let point = getMousePosition(e, svg)
+    if(activePen !== null){
+        const started = cubicPath.segments.length > 0
+          if (!started) {
+              cubicPath.segments = [{ type: "move", absolute: true, end: point, handles: [] }]
+          }else{
+              const handlesQty = activePen === 'cubic' ? 2: 1
+              const lastSeg = getLastElem(cubicPath.segments).end
+              const firstSeg = cubicPath.segments[0].end
+              const closesPath = similar(firstSeg.x, point.x) && similar(firstSeg.y, point.y)
+              if (closesPath) point = firstSeg
+              const handles = getMidpointsOfLine({ start: lastSeg, end: point, qty: handlesQty })
+              //@ts-ignore
+              cubicPath.segments = [...cubicPath.segments, {
+                  type: activePen,
+                  handles,
+                  end: point,
+                  absolute: true
+              }]
+              if(closesPath){
+                  console.log('Path closed')
+                  cubicPath.segments = [...cubicPath.segments, {
+                      type: "zeroClosePath",
+                      handles: [],
+                      end: point,
+                      absolute: true
+                  }]
+              }
+          }
+    }
+  }
+  const nearest = (num: number, nearestUnit: number) => Math.round(num / nearestUnit) * nearestUnit
+  const similar = (n1: number, n2: number) => nearest(n1, 10) === nearest(n2, 10)
+  let listeningForClick = false
+  $: if (!listeningForClick && svg) {
+    listeningForClick = true
+    svg.addEventListener("click", handleClick)
+  }
 </script>
 
 <div>
-
-    <button on:click={()=>togglePen('cubic')}
-            class:active={activePen==='cubic'}
+  {#each ['cubic', 'quadratic', 'smoothCubic', 'tsmoothQuadratic'] as penType}
+    <button on:click={()=>togglePen(penType)}
+            class:active={activePen===penType}
             class="pen"
-    >Cubic pen</button>
-
-    <SvgContainer bind:svg>
-        <SvgPath jsonPath={cubicPath} svg={svg}/>
-    </SvgContainer>
+    >{penType}
+    </button>
+  {/each}
+  <SvgContainer bind:svg>
+    <SvgPath jsonPath={cubicPath} svg={svg} bind:activePen />
+  </SvgContainer>
 
 </div>
 
 
 <style>
-    button.pen{
+    button.pen {
         border-radius: 0.25rem;
         border: 1px solid #0000;
         background: #0002;
         padding: 0.2rem;
     }
-    button.active{
+
+    button.active {
         background: #0006;
     }
 </style>

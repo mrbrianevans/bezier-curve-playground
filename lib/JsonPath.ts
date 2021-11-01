@@ -8,7 +8,14 @@ export interface JsonPath {
 // L point
 
 export interface PathSegment {
-  type: "move" | "cubic" | "quadratic" | "line"
+  type:
+    | "move"
+    | "cubic"
+    | "quadratic"
+    | "line"
+    | "smoothCubic"
+    | "tsmoothQuadratic"
+    | "zeroClosePath"
   absolute?: boolean
   end: Point
   handles: Point[]
@@ -37,7 +44,28 @@ interface QuadraticSegment extends PathSegment {
   handles: [Point]
 }
 
-type Segment = MoveSegment | LineSegment | CubicSegment | QuadraticSegment
+interface SmoothCubicSegment extends PathSegment {
+  type: "smoothCubic"
+  handles: [Point]
+}
+
+interface SmoothQuadraticSegment extends PathSegment {
+  type: "tsmoothQuadratic"
+  handles: []
+}
+interface ZeroClosePathSegment extends PathSegment {
+  type: "zeroClosePath"
+  handles: []
+}
+
+type Segment =
+  | MoveSegment
+  | LineSegment
+  | CubicSegment
+  | QuadraticSegment
+  | SmoothCubicSegment
+  | SmoothQuadraticSegment
+  | ZeroClosePathSegment
 
 let seg: Segment = {
   type: "line",
