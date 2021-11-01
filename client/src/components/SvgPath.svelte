@@ -95,7 +95,7 @@
     }
 
     g.focus path {
-        stroke: #00a8ff;
+        stroke: url(#YellowToRedGradient);
     }
 
     circle.handle {

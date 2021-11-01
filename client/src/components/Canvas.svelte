@@ -66,6 +66,13 @@
     </button>
   {/each}
   <SvgContainer bind:svg>
+    <defs>
+      <linearGradient id="YellowToRedGradient">
+        <stop stop-color="yellow" offset="0%"></stop>
+        <stop stop-color="orange" offset="50%"></stop>
+        <stop stop-color="red" offset="100%"></stop>
+      </linearGradient>
+    </defs>
     <SvgPath jsonPath={cubicPath} svg={svg} bind:activePen />
   </SvgContainer>
 
